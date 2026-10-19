@@ -1005,6 +1005,16 @@ const STATUS_LABELS = {
   integradanaoatende: 'Comarca integrada: não há atendimento pela DPE'
 };
 
+// na lista (consulta): tipo (sede, termo, agregada ou integrada) + se atende ou não
+const ATENDE_LABELS = {
+  sede: 'SEDE: ATENDE',
+  termoatende: 'TERMO: ATENDE',
+  agregada: 'AGREGADA: ATENDE',
+  termonaoatende: 'TERMO: NÃO ATENDE',
+  naoatende: 'SEDE: NÃO ATENDE',
+  integradanaoatende: 'INTEGRADA: NÃO ATENDE'
+};
+
 function renderList(){
   const grid = document.getElementById('grid');
   grid.innerHTML = '';
@@ -1032,7 +1042,7 @@ function renderList(){
     });
     if (READONLY){
       // consulta: sem botões, apenas o texto da situação já definida
-      card.innerHTML = `<div class="name">${nome}</div><div class="status-chip ${status || 'pendente'}">${STATUS_LABELS[status] || 'Sem classificação'}</div>`;
+      card.innerHTML = `<div class="name">${nome}</div><div class="status-chip ${status || 'pendente'}">${ATENDE_LABELS[status] || 'Sem classificação'}</div>`;
       grid.appendChild(card);
       return;
     }
