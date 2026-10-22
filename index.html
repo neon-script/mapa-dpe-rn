@@ -74,6 +74,8 @@
   }
   @media (max-width: 980px){ .stats{ grid-template-columns: repeat(4,1fr); } }
   @media (max-width: 480px){ .stats{ grid-template-columns: repeat(2,1fr); } }
+  @media (max-width: 480px){ .stats .stat:last-child:nth-child(odd){ grid-column: 1 / -1; } }
+  @media (min-width: 481px) and (max-width: 980px){ .stats .stat:last-child:nth-child(4n+3){ grid-column: span 2; } }
   .stat{ background: var(--paper-raised); padding: 16px 18px; }
   .stat .n{ font-family:'Fraunces', serif; font-size: 30px; font-weight: 600; line-height: 1; }
   .stat .l{ font-family:'IBM Plex Mono', monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-soft); margin-top: 6px; }
@@ -196,8 +198,8 @@
   .map-tooltip{
     position:absolute; transform: translate(-50%, -130%);
     background: var(--ink); color: var(--paper); font-family:'Inter', sans-serif; font-size: 12px;
-    padding: 5px 9px; white-space: nowrap; pointer-events:none; z-index: 10; display:none;
-  }
+    padding: 5px 9px;  pointer-events:none; z-index: 10; display:none;
+   white-space: normal; width: max-content; max-width: calc(100% - 12px); text-align: center; line-height: 1.35; }
   .map-tooltip::after{
     content:""; position:absolute; left:50%; top:100%; transform: translateX(-50%);
     border: 5px solid transparent; border-top-color: var(--ink);
@@ -287,7 +289,7 @@
     stroke: #111; stroke-width: 3; filter: drop-shadow(0 0 5px rgba(0,0,0,0.55)); opacity: 1;
     animation: selpulse 0.9s ease-in-out 3;
   }
-  .has-selection .muni-path:not(.selected){ opacity: 0.45; }
+  .has-selection .muni-path:not(.selected):not(.ref){ opacity: 0.45; }
   .card .name{ font-family:'Fraunces', serif; font-weight: 600; font-size: 14px; line-height: 1.25; cursor:pointer; }
   .card .name:hover{ text-decoration: underline; }
   .toggles{ display:flex; gap: 5px; flex-shrink:0; flex-wrap: wrap; justify-content: flex-end; max-width: 145px; }
@@ -305,7 +307,26 @@
   .toggles button:hover{border-color: var(--ink);}
   .empty-msg{ text-align:center; padding: 30px 10px; color: var(--ink-soft); font-family:'IBM Plex Mono', monospace; font-size: 13px; }
 
+  .termo-panel{
+    margin-top: 12px; padding: 12px 14px; background: #EAF3F9; border: 1px solid #BADCEC; border-left: 4px solid var(--accent-blue);
+    font-size: 14px; line-height: 1.5; color: var(--ink);
+  }
+  .termo-panel[hidden]{ display:none; }
+  .termo-panel .tp-kicker{ font-family:'IBM Plex Mono', monospace; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--accent-blue); display:block; margin-bottom: 3px; }
+  .termo-panel strong{ font-family:'Fraunces', serif; font-weight: 600; }
+  .termo-panel .tp-status{ display:block; margin-top: 4px; font-family:'IBM Plex Mono', monospace; font-size: 11px; color: var(--ink-soft); }
+  .card-info{ flex-basis: 100%; font-size: 12.5px; color: var(--accent-blue); border-top: 1px dashed var(--line-strong); padding-top: 7px; margin-top: 2px; }
+  .card-info strong{ font-weight: 700; }
+  body .muni-path.ref, body .muni-path.ref:hover, body.readonly .muni-path.ref, body.readonly .muni-path.ref:hover{
+    stroke: #11699A; stroke-width: 3; stroke-dasharray: 7 4; opacity: 1;
+  }
   footer .updated-at{ color: var(--ink); font-weight: 500; }
+  .glossario{ margin-top: 24px; background: var(--paper-raised); border: 1px solid var(--line-strong); padding: 20px 22px; }
+  .glossario h2{ font-family:'Fraunces', serif; font-size: 18px; font-weight: 600; margin: 0 0 14px; }
+  .glossario dl{ margin: 0; display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px 24px; }
+  .glossario dt{ font-family:'IBM Plex Mono', monospace; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent-blue); font-weight: 500; margin-bottom: 4px; }
+  .glossario dd{ margin: 0; font-size: 13.5px; line-height: 1.55; color: var(--ink-soft); }
+  @media print{ .glossario{ break-inside: avoid; border: none; padding: 0; } }
   footer{
     margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--line);
     font-family:'IBM Plex Mono', monospace; font-size: 11px; color: var(--ink-soft); line-height: 1.6;
@@ -370,6 +391,7 @@
           <button id="zoom-reset" title="Restaurar zoom" aria-label="Restaurar zoom">100%</button>
         </div>
       </div>
+      <div class="termo-panel" id="termo-panel" hidden></div>
       <div class="map-legend">
         <span><i style="background:var(--sede)"></i>Sede de comarca: há atendimento pela DPE</span>
         <span><i style="background:var(--termo)"></i>Termo de comarca: há atendimento pela DPE</span>
@@ -387,17 +409,39 @@
       </div>
       <div class="filter-group" id="filter-group">
         <button class="active" data-filter="all">Todos</button>
-        <button data-filter="sede">Sede de comarca: há atendimento pela DPE</button>
-        <button data-filter="termoatende">Termo de comarca: há atendimento pela DPE</button>
-        <button data-filter="termonaoatende">Termo de comarca: não há atendimento pela DPE</button>
+        <button data-filter="sede">Comarca sede: há atendimento pela DPE</button>
+        <button data-filter="termoatende">Comarca termo: há atendimento pela DPE</button>
+        <button data-filter="termonaoatende">Comarca termo: não há atendimento pela DPE</button>
         <button data-filter="agregada">Comarca agregada: há atendimento pela DPE</button>
         <button data-filter="integradanaoatende">Comarca integrada: não há atendimento pela DPE</button>
-        <button data-filter="naoatende">Sede de comarca: não há atendimento pela DPE</button>
+        <button data-filter="naoatende">Comarca sede: não há atendimento pela DPE</button>
       </div>
       <br>
       <div class="grid" id="grid"></div>
     </div>
   </div>
+
+  <section class="glossario" aria-labelledby="glos-title">
+    <h2 id="glos-title">Entenda cada classificação</h2>
+    <dl>
+      <div>
+        <dt>Comarca sede</dt>
+        <dd>É a cidade-polo da comarca. Nela ficam o fórum principal, a estrutura central do Judiciário e a maioria dos servidores, e é dali que o juiz atua e despacha originalmente.</dd>
+      </div>
+      <div>
+        <dt>Comarca termo (comarca vinculada)</dt>
+        <dd>São os municípios menores que pertencem à mesma comarca da sede. Eles não têm uma estrutura judicial completa própria nem um juiz titular exclusivo: são atendidos a partir da sede.</dd>
+      </div>
+      <div>
+        <dt>Comarca agregada</dt>
+        <dd>É a comarca cuja competência foi absorvida por outra maior, em geral vizinha. Na prática, perde a autonomia administrativa: as novas ações passam a tramitar e a ser despachadas direto pelo juiz da comarca vizinha.</dd>
+      </div>
+      <div>
+        <dt>Comarca integrada</dt>
+        <dd>Acontece quando duas ou mais comarcas distintas passam a compartilhar a mesma estrutura administrativa, como sistemas de informática, central de mandados ou secretarias unificadas.</dd>
+      </div>
+    </dl>
+  </section>
 
   <footer>
     Fronteiras municipais: malha do IBGE (domínio público), via base geodata-br.
@@ -643,6 +687,7 @@ function setStatus(nome, val){
   renderList();
   updateStats();
   saveState();
+  refreshInfo();
 }
 
 async function loadState(){
@@ -692,6 +737,73 @@ async function saveState(){
 }
 
 /* ---------- Build map once ---------- */
+const TERMO_DE = {"Água Nova": "Pau dos Ferros", "Alto do Rodrigues": "Pendências", "Antônio Martins": "Martins", "Baía Formosa": "Canguaretama", "Bento Fernandes": "João Câmara", "Boa Saúde": "Tangará", "Bodó": "Currais Novos", "Bom Jesus": "Macaíba", "Brejinho": "Monte Alegre", "Caiçara do Norte": "São Bento do Norte", "Caiçara do Rio do Vento": "Lajes", "Campo Redondo": "Santa Cruz", "Cerro Corá": "Currais Novos", "Coronel Ezequiel": "Santa Cruz", "Coronel João Pessoa": "São Miguel", "Doutor Severiano": "São Miguel", "Encanto": "Pau dos Ferros", "Equador": "Parelhas", "Espírito Santo": "Goianinha", "Felipe Guerra": "Apodi", "Fernando Pedroza": "Angicos", "Francisco Dantas": "Pau dos Ferros", "Galinhos": "Macau", "Grossos": "Areia Branca", "Guamaré": "Macau", "Ielmo Marinho": "Macaíba", "Ipueira": "Caicó", "Itajá": "Ipanguaçu", "Itaú": "Apodi", "Jaçanã": "Santa Cruz", "Jandaíra": "João Câmara", "Japi": "Santa Cruz", "Jardim de Angicos": "João Câmara", "João Dias": "Alexandria", "José da Penha": "Luís Gomes", "Jundiá": "Santo Antônio", "Lagoa d'Anta": "Nova Cruz", "Lagoa de Pedras": "Santo Antônio", "Lagoa Nova": "Currais Novos", "Lagoa Salgada": "Monte Alegre", "Lajes Pintadas": "Santa Cruz", "Major Sales": "Luís Gomes", "Maxaranguape": "Extremoz", "Montanhas": "Nova Cruz", "Monte das Gameleiras": "São José do Campestre", "Paraná": "Luís Gomes", "Paraú": "Campo Grande", "Passa e Fica": "Nova Cruz", "Passagem": "Santo Antônio", "Pedra Grande": "São Bento do Norte", "Pedra Preta": "Lajes", "Pilões": "Alexandria", "Porto do Mangue": "Areia Branca", "Pureza": "Ceará-Mirim", "Rafael Fernandes": "Pau dos Ferros", "Riacho de Santana": "Pau dos Ferros", "Riachuelo": "São Paulo do Potengi", "Rio do Fogo": "Touros", "Rodolfo Fernandes": "Apodi", "Santa Maria": "São Paulo do Potengi", "Santana do Seridó": "Parelhas", "São Bento do Trairí": "Santa Cruz", "São Fernando": "Caicó", "São Francisco do Oeste": "Pau dos Ferros", "São Miguel do Gostoso": "Touros", "São Pedro": "São Paulo do Potengi", "São Vicente": "Florânia", "Senador Elói de Souza": "Tangará", "Senador Georgino Avelino": "Nísia Floresta", "Serra Caiada": "Tangará", "Serra de São Bento": "São José do Campestre", "Serra do Mel": "Mossoró", "Serrinha": "Santo Antônio", "Serrinha dos Pintos": "Martins", "Severiano Melo": "Apodi", "Sítio Novo": "Tangará", "Tenente Laurentino Cruz": "Florânia", "Tibau": "Mossoró", "Tibau do Sul": "Goianinha", "Timbaúba dos Batistas": "Caicó", "Triunfo Potiguar": "Campo Grande", "Várzea": "Santo Antônio", "Venha-Ver": "São Miguel", "Vera Cruz": "Monte Alegre", "Vila Flor": "Canguaretama", "Barcelona": "São Tomé", "Carnaúba dos Dantas": "Acari", "Carnaubais": "Açu", "Frutuoso Gomes": "Almino Afonso", "Lagoa de Velhos": "São Tomé", "Lucrécia": "Almino Afonso", "Messias Targino": "Patu", "Olho-d'Água do Borges": "Umarizal", "Ouro Branco": "Jardim do Seridó", "Parazinho": "João Câmara", "Rafael Godeiro": "Almino Afonso", "Riacho da Cruz": "Portalegre", "Ruy Barbosa": "São Tomé", "São José do Seridó": "Cruzeta", "Taboleiro Grande": "Portalegre", "Tenente Ananias": "Marcelino Vieira", "Viçosa": "Portalegre"};
+
+let infoMuni = null;
+let refMuni = null;
+
+const AGREGADA_A = {"Afonso Bezerra": "Angicos", "Arês": "Nísia Floresta", "Governador Dix-Sept Rosado": "Mossoró", "Janduís": "Campo Grande", "Pedro Avelino": "Lajes", "Pedro Velho": "Canguaretama", "Poço Branco": "João Câmara", "São João do Sabugi": "Caicó", "São Rafael": "Açu", "Serra Negra do Norte": "Caicó", "Taipu": "Ceará-Mirim"};
+const INTEGRADA_A = {"São Bento do Norte": "Touros"};
+
+// vínculo de cada município: tipo (termo, agregada ou integrada), comarca de referência e se há atendimento
+function termoInfo(nome){
+  const s = state[nome];
+  if ((s === 'termoatende' || s === 'termonaoatende') && TERMO_DE[nome])
+    return { tipo: 'termo', sede: TERMO_DE[nome], atende: s === 'termoatende' };
+  if (s === 'agregada' && AGREGADA_A[nome])
+    return { tipo: 'agregada', sede: AGREGADA_A[nome], atende: true };
+  if (s === 'integradanaoatende' && INTEGRADA_A[nome])
+    return { tipo: 'integrada', sede: INTEGRADA_A[nome], atende: false };
+  return null;
+}
+
+const INFO_TXT = {
+  termo:     { kicker: 'Comarca termo',     frase: (n, s) => '<strong>' + n + '</strong> é comarca termo de <strong>' + s + '</strong>.',               curta: s => 'Comarca termo de <strong>' + s + '</strong>' },
+  agregada:  { kicker: 'Comarca agregada',  frase: (n, s) => '<strong>' + n + '</strong> é comarca agregada à comarca de <strong>' + s + '</strong>.', curta: s => 'Comarca agregada à comarca de <strong>' + s + '</strong>' },
+  integrada: { kicker: 'Comarca integrada', frase: (n, s) => '<strong>' + n + '</strong> é comarca integrada a <strong>' + s + '</strong>.',          curta: s => 'Comarca integrada a <strong>' + s + '</strong>' }
+};
+
+function refreshInfo(){
+  const panel = document.getElementById('termo-panel');
+  const info = infoMuni ? termoInfo(infoMuni) : null;
+  // painel abaixo do mapa
+  if (info){
+    const t = INFO_TXT[info.tipo];
+    panel.innerHTML = '<span class="tp-kicker">' + t.kicker + '</span>' + t.frase(infoMuni, info.sede) +
+      '<span class="tp-status">' + (info.atende ? 'Há atendimento pela DPE' : 'Não há atendimento pela DPE') + '</span>';
+    panel.hidden = false;
+  } else {
+    panel.hidden = true; panel.innerHTML = '';
+  }
+  // contorno tracejado na comarca sede de referência
+  const newRef = info ? info.sede : null;
+  const changed = newRef !== refMuni;
+  refMuni = newRef;
+  applyMapStyles();
+  if (refMuni){
+    const el = document.getElementById('muni-' + slug(refMuni));
+    if (el && changed) el.parentNode.appendChild(el);
+  }
+  syncCardInfo();
+}
+
+function syncCardInfo(){
+  document.querySelectorAll('#grid .card').forEach(c => {
+    const old = c.querySelector('.card-info'); if (old) old.remove();
+    if (c.dataset.nome === infoMuni){
+      const info = termoInfo(infoMuni);
+      if (info){
+        const d = document.createElement('div');
+        d.className = 'card-info';
+        d.innerHTML = INFO_TXT[info.tipo].curta(info.sede);
+        c.appendChild(d);
+      }
+    }
+  });
+}
+
+function setInfo(nome){ infoMuni = nome; refreshInfo(); }
+
 let tipTimer = null;
 let lastTouchAt = 0;
 function canHover(){ return window.matchMedia('(hover: hover)').matches; }
@@ -757,6 +869,7 @@ function buildMap(){
     path.addEventListener('click', (e) => {
       if (panMoved) return;
       if (!READONLY) setStatus(m.name, nextStatus(state[m.name]));
+      if (READONLY) selectMuni(m.name, false); else setInfo(m.name);
       // toque no celular: mostra o nome (e a situação) e some sozinho depois de alguns segundos
       showTip(m.name, e.clientX, e.clientY);
       const touchLike = e.pointerType === 'touch' || !window.matchMedia('(hover: hover)').matches;
@@ -941,17 +1054,18 @@ function syncSelectionUI(){
 }
 
 function clearSelection(){
-  if (!selectedMuni) return;
-  selectedMuni = null;
-  applyMapStyles();
+  const had = !!selectedMuni || !!infoMuni;
+  selectedMuni = null; infoMuni = null;
+  if (!had) return;
   syncSelectionUI();
+  refreshInfo();
 }
 
-function selectMuni(nome){
+function selectMuni(nome, fromList){
   if (selectedMuni === nome){ clearSelection(); hideTip(); return; }
-  selectedMuni = nome;
-  applyMapStyles();
+  selectedMuni = nome; infoMuni = nome;
   syncSelectionUI();
+  refreshInfo();
   const el = document.getElementById('muni-' + slug(nome));
   if (!el) return;
   el.parentNode.appendChild(el); // traz o território para frente, para a borda de destaque não ficar escondida
@@ -965,9 +1079,10 @@ function selectMuni(nome){
   }
   // no celular o mapa fica acima da lista: leva o mapa para a vista se estiver fora da tela
   const fr2 = frame.getBoundingClientRect();
-  if (fr2.top < 0 || fr2.bottom > window.innerHeight){
+  if (fromList && (fr2.top < 0 || fr2.bottom > window.innerHeight)){
     frame.scrollIntoView({behavior: 'smooth', block: 'center'});
   }
+  if (!fromList) return;
   const r2 = el.getBoundingClientRect();
   showTip(nome, r2.left + r2.width/2, r2.top + r2.height/2);
   scheduleHideTip();
@@ -990,6 +1105,7 @@ function applyMapStyles(){
     if (currentFilter === 'agregada' && status !== 'agregada') dim = true;
     if (currentFilter === 'integradanaoatende' && status !== 'integradanaoatende') dim = true;
     if (selectedMuni === m.name){ cls += ' selected'; dim = false; }
+    if (refMuni === m.name){ cls += ' ref'; dim = false; }
     if (dim) cls += ' dim';
     el.setAttribute('class', cls);
   });
@@ -1007,12 +1123,12 @@ const STATUS_LABELS = {
 
 // na lista (consulta): tipo (sede, termo, agregada ou integrada) + se atende ou não
 const ATENDE_LABELS = {
-  sede: 'SEDE: ATENDE',
-  termoatende: 'TERMO: ATENDE',
-  agregada: 'AGREGADA: ATENDE',
-  termonaoatende: 'TERMO: NÃO ATENDE',
-  naoatende: 'SEDE: NÃO ATENDE',
-  integradanaoatende: 'INTEGRADA: NÃO ATENDE'
+  sede: 'COMARCA SEDE: ATENDE',
+  termoatende: 'COMARCA TERMO: ATENDE',
+  agregada: 'COMARCA AGREGADA: ATENDE',
+  termonaoatende: 'COMARCA TERMO: NÃO ATENDE',
+  naoatende: 'COMARCA SEDE: NÃO ATENDE',
+  integradanaoatende: 'COMARCA INTEGRADA: NÃO ATENDE'
 };
 
 function renderList(){
@@ -1038,7 +1154,7 @@ function renderList(){
     if (selectedMuni === nome) card.classList.add('selected');
     card.addEventListener('click', (e) => {
       if (e.target.closest('.toggles')) return; // botões de status não selecionam
-      selectMuni(nome);
+      selectMuni(nome, true);
     });
     if (READONLY){
       // consulta: sem botões, apenas o texto da situação já definida
@@ -1049,10 +1165,10 @@ function renderList(){
     card.innerHTML = `
       <div class="name" data-nome="${nome}">${nome}</div>
       <div class="toggles">
-        <button class="sede ${status==='sede' ? 'on' : ''}" data-nome="${nome}" data-val="sede">Sede de comarca: há atendimento pela DPE</button>
-        <button class="termoatende ${status==='termoatende' ? 'on' : ''}" data-nome="${nome}" data-val="termoatende">Termo de comarca: há atendimento pela DPE</button>
-        <button class="termonaoatende ${status==='termonaoatende' ? 'on' : ''}" data-nome="${nome}" data-val="termonaoatende">Termo de comarca: não há atendimento pela DPE</button>
-        <button class="naoatende ${status==='naoatende' ? 'on' : ''}" data-nome="${nome}" data-val="naoatende">Sede de comarca: não há atendimento pela DPE</button>
+        <button class="sede ${status==='sede' ? 'on' : ''}" data-nome="${nome}" data-val="sede">Comarca sede: há atendimento pela DPE</button>
+        <button class="termoatende ${status==='termoatende' ? 'on' : ''}" data-nome="${nome}" data-val="termoatende">Comarca termo: há atendimento pela DPE</button>
+        <button class="termonaoatende ${status==='termonaoatende' ? 'on' : ''}" data-nome="${nome}" data-val="termonaoatende">Comarca termo: não há atendimento pela DPE</button>
+        <button class="naoatende ${status==='naoatende' ? 'on' : ''}" data-nome="${nome}" data-val="naoatende">Comarca sede: não há atendimento pela DPE</button>
         <button class="agregada ${status==='agregada' ? 'on' : ''}" data-nome="${nome}" data-val="agregada">Comarca agregada: há atendimento pela DPE</button>
         <button class="integradanaoatende ${status==='integradanaoatende' ? 'on' : ''}" data-nome="${nome}" data-val="integradanaoatende">Comarca integrada: não há atendimento pela DPE</button>
       </div>
@@ -1063,6 +1179,7 @@ function renderList(){
   if (visibleCount === 0){
     grid.innerHTML = '<div class="empty-msg">Nenhum município encontrado.</div>';
   }
+  syncCardInfo();
 
   grid.querySelectorAll('.toggles button').forEach(btn => {
     btn.addEventListener('click', () => {
